@@ -5,15 +5,38 @@ import urllib2, re, urllib, cgi, codecs
 import cgitb
 
 def getCorpora():
-  xml = urllib2.urlopen('https://korpling.german.hu-berlin.de/annis3-service/annis/query/corpora').read().decode("utf-8")
+  """ get all corpora """
+  xml = urllib2.urlopen('https://korpling.german.hu-berlin.de/annis3-service/"
+                        + 'annis/query/corpora').read().decode("utf-8")
   regex = re.compile("<name>(.+?)</name>")
   return regex.findall(xml)
 
-def getAnnotations(corpora):
-  """ for a list of corpora, get all annotations """
+def getAnnotationLevelsAndValuesFromCorpus(corpus):
+  """ from a corpus, get all annotation levels and values """
+  annodict = {}
+  url = str("https://korpling.german.hu-berlin.de/annis3-service/annis/query/" 
+            + "corpora/" + corpus + "/annotations?fetchvalues=true")
+  xml = urllib2.urlopen(url).read().decode("utf-8")
+  regexAttr = re.compile("<annisAttribute>(.+?)</annisAttribute>", re.DOTALL)
+  regexAttrName = re.compile("<name>(.+?)</name>")
+  regexValues = re.compile("<value>(.+?)</value>")
+  attributes = regexAttr.findall(xml)
+  for attribute in attributes:
+    name = regexAttrName.findall(attribute)[0]
+    values = regexValues.findall(attribute)
+    try:
+      annodict[name].extend(values)
+      annodict[name] = list(set(annodict[name]))
+    except KeyError:
+      annodict[name] = list(set(values))
+  return annodict
+
+def getAnnotationLevelsAndValuesFromCorpora(corpora):
+  """ from a list of corpora, get all annotation levels and values """
   annodict = {}
   for corpus in corpora:
-    url = str("https://korpling.german.hu-berlin.de/annis3-service/annis/query/corpora/" + corpus + "/annotations?fetchvalues=true")
+    url = str("https://korpling.german.hu-berlin.de/annis3-service/annis/query/"
+              + "corpora/" + corpus + "/annotations?fetchvalues=true")
     xml = urllib2.urlopen(url).read().decode("utf-8")
     regexAttr = re.compile("<annisAttribute>(.+?)</annisAttribute>", re.DOTALL)
     regexAttrName = re.compile("<name>(.+?)</name>")
@@ -27,6 +50,37 @@ def getAnnotations(corpora):
         annodict[name] = list(set(annodict[name]))
       except KeyError:
         annodict[name] = list(set(values))
+  return annodict
+
+def getAnnotationLevelsFromCorpus(corpus):
+  """ from a corpus, get all annotation levels """
+  annolist = []
+  url = str("https://korpling.german.hu-berlin.de/annis3-service/annis/query/"
+            + "corpora/" + corpus + "/annotations?fetchvalues=false")
+  xml = urllib2.urlopen(url).read().decode("utf-8")
+  regexAttr = re.compile("<annisAttribute>(.+?)</annisAttribute>", re.DOTALL)
+  regexAttrName = re.compile("<name>(.+?)</name>")
+  attributes = regexAttr.findall(xml)
+  for attribute in attributes:
+    name = regexAttrName.findall(attribute)[0]
+    if name not in annolist:
+      annolist.append(name)
+  return annolist
+
+def getAnnotationLevelsFromCorpora(corpora):
+  """ from a list of corpora, get all annotation levels  """
+  annolist = []
+  for corpus in corpora:
+    url = str("https://korpling.german.hu-berlin.de/annis3-service/annis/query/"
+              + "corpora/" + corpus + "/annotations?fetchvalues=false")
+    xml = urllib2.urlopen(url).read().decode("utf-8")
+    regexAttr = re.compile("<annisAttribute>(.+?)</annisAttribute>", re.DOTALL)
+    regexAttrName = re.compile("<name>(.+?)</name>")
+    attributes = regexAttr.findall(xml)
+    for attribute in attributes:
+      name = regexAttrName.findall(attribute)[0]
+      if name not in annolist:
+        annolist.append(name)
   return annodict
 
 def aql(ps):
@@ -77,7 +131,8 @@ def createAQL(query, zeit, raum, text):
   aqlurl = "_q=" + aqlurl.encode("base64")
   aqlstr = query + text + zeit + raum
   corpora = getDDDCorpora()
-  scope = "&_c=" + unicode(",".join(corpora)).encode("base64") + "&cl=7&cr=7&s=0&l=30&seg=txt"
+  scope = unicode("&_c=" + unicode(",".join(corpora)).encode("base64") + 
+          "&cl=7&cr=7&s=0&l=30&seg=txt")
   return aqlstr, unicode(baseurl.strip() + aqlurl + scope.strip())
 
 def cgiFieldStorageToDict( fieldStorage ):
