@@ -97,7 +97,7 @@ def aql(ps):
         numbers = numbers + "#" + str(i)
         i += 1
       if j%2 == 0:
-        numbers = numbers + " .1,3 #" + str(i) + " &\n"
+        numbers = numbers + " . #" + str(i) + " &\n"
       j += 1
   if len(ps) == 1:
     statements = ps[0]
@@ -118,34 +118,35 @@ def parseQueryTerm(d, dkey, a, akey):
   except KeyError:
     return ""
 
-def createAQL(query, zeit, raum, text):
+def createURL(query, corpora, contextleft, contextright, hitsperpage, seg):
+  """
+    create aql url in base 64
+    query: pure aql
+    corpora: list of corpora names
+    contextleft: integer with amount of tokens left
+    contextright: integer with amount of tokens right
+    hitsperpage: integer with amount of hits per annis page
+    seg: default segmentation in kwic
+  """
+
   baseurl = "https://korpling.german.hu-berlin.de/annis3/#"
   aqlurl = ""
-  if query:
-    aqlurl = query.strip()
-  if text:
-    aqlurl = aqlurl + " & " + text.strip()
-  if zeit:
-    aqlurl = aqlurl + " & " + zeit.strip()
-  if raum:
-    aqlurl = aqlurl + " & " + raum.strip()
+  aqlurl = query.strip()
   aqlurl = "_q=" + aqlurl.encode("base64")
-  aqlstr = query + text + zeit + raum
-  corpora = getDDDCorpora()
   scope = unicode("&_c=" + unicode(",".join(corpora)).encode("base64") + 
-          "&cl=7&cr=7&s=0&l=30&seg=txt")
-  return aqlstr, unicode(baseurl.strip() + aqlurl + scope.strip())
+          "&cl=" + str(contextleft) + "&cr=" + str(contextright) + 
+          "&s=0&l=" + str(hitsperpage) + "&seg=" + seg)
+  return unicode(baseurl.strip() + aqlurl + scope.strip())
 
 def cgiFieldStorageToDict( fieldStorage ):
   params = {}
   for key in fieldStorage.keys():
     params[key] = fieldStorage.getlist(key)
-#  params = params = {"query": ["lieber"], "text": ["alltag"]}
   return params
 
 def form2aql(form, adict):
   d = cgiFieldStorageToDict(form)
   query = parseQueryTerm(d, dkey, adict, akey)
-  return createAQL(query)
+  return createURL(query, corpora)
 
 
