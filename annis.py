@@ -15,56 +15,29 @@ def getCorpora():
     out.append(name.string)
   return out
 
-def getAnnotations(*args):
-  if len(args) == 0:
-    return getAnnotationsImpl(getCorpora(), [], "true")
+def getAnnotations(corpora=getCorpora(), levels=[], values=True):
+  assert isinstance(corpora, (list, str, unicode)), \
+    "corpora: expecting a string or a list of strings as input"
+  if isinstance(corpora, (str, unicode)):
+    corpora = [corpora]
 
-  # underspecify corpora and levels || only specify values
-  if len(args) == 1 and isinstance(args[0], bool):
-    return getAnnotationsImpl(getCorpora(), [], str(args[0]).lower() )
+  assert isinstance(levels, (list, str, unicode)), \
+    "levels: expecting a string or a list of strings as input"
+  if isinstance(levels, (str, unicode)):
+    levels = [levels]
 
-  # underspecify levels and values || only specify corpora
-  if len(args) == 1 and isinstance(args[0], str):
-    return getAnnotationsImpl([args[0]], [], "true")
-  if len(args) == 1 and isinstance(args[0], list):
-    return getAnnotationsImpl(args[0], [], "true")
+  return __get_annotations(corpora, levels, values)
 
-  # underspecify values || only specify corpora and levels
-  if len(args) == 2 and isinstance(args[0], str) and isinstance(args[1], str):
-    return getAnnotationsImpl([args[0]], [args[1]], "true")
-  if len(args) == 2 and isinstance(args[0], list) and isinstance(args[1], str):
-    return getAnnotationsImpl(args[0], [args[1]], "true")
-  if len(args) == 2 and isinstance(args[0], str) and isinstance(args[1], list):
-    return getAnnotationsImpl([args[0]], args[1], "true")
-  if len(args) == 2 and isinstance(args[0], list) and isinstance(args[1], list):
-    return getAnnotationsImpl(args[0], args[1], "true")
 
-  # underspecify levels || only specify corpora and values
-  if len(args) == 2 and isinstance(args[0], str) and isinstance(args[1], bool):
-    return getAnnotationsImpl([args[0]], [], str(args[2]).lower() )
-  if len(args) == 2 and isinstance(args[0], list) and isinstance(args[1], bool):
-    return getAnnotationsImpl(args[0], [], str(args[2]).lower() )
 
-  # underspecify anything || specify corpora, levels and values
-  if len(args) == 3 and isinstance(args[0], str) and isinstance(args[1], str) and isinstance(args[2], bool):
-    return getAnnotationsImpl([args[0]], [args[1]], str(args[2]).lower() )
-  if len(args) == 3 and isinstance(args[0], list) and isinstance(args[1], str) and isinstance(args[2], bool):
-    return getAnnotationsImpl(args[0], [args[1]], str(args[2]).lower() )
-  if len(args) == 3 and isinstance(args[0], str) and isinstance(args[1], list) and isinstance(args[2], bool):
-    return getAnnotationsImpl([args[0]], args[1], str(args[2]).lower() )
-  if len(args) == 3 and isinstance(args[0], list) and isinstance(args[1], list) and isinstance(args[2], bool):
-    return getAnnotationsImpl(args[0], args[1], str(args[2]).lower() )
-
-  else:
-    raise TypeError('I do not know how to deal with these parameter settings.')
-
-def getAnnotationsImpl(corpora, levels, boolvalues):
+def __get_annotations(corpora, levels, boolvalue):
   out = {}
   for corpus in corpora:
     if corpus in getCorpora():
       out[corpus] = {}
+      bool_str = str(boolvalue).lower()
       url = str("https://korpling.german.hu-berlin.de/annis3-service/annis/query/" 
-                + "corpora/" + corpus + "/annotations?fetchvalues=" + boolvalues)
+                + "corpora/" + corpus + "/annotations?fetchvalues=" + bool_str)
       print "checking url", url
       xml = urllib2.urlopen(url).read().decode("utf-8")
       soup = BeautifulSoup(xml)
@@ -81,7 +54,7 @@ def getAnnotationsImpl(corpora, levels, boolvalues):
               values.append(value_raw.string)
             out[corpus][name] = {"type": typ, "values": values}
     else:
-      raise TypeError('This is not a corpus.')
+      raise TypeError('There is no "{0}" corpus.'.format(corpus))
   return out
 
 def aql(ps):
